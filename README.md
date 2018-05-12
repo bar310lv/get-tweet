@@ -1,5 +1,6 @@
-#test repositorey
+#git reposetory
 
-3行の変更履歴
 
-ithubを使いこなすためのリポジトリ
+my test reposetory
+
+
