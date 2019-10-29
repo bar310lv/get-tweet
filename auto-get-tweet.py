@@ -228,11 +228,7 @@ if __name__ == '__main__':
     # ユーザーを指定して取得 （screen_name）
     # getter = GetTweets.byUser('bar310lv')
 
-    #期間を指定して取得
-
-
-
-
+    #tweets1.txtに書き込み
     f = codecs.open('/Users/oybn/fasttext/tweets1.txt', 'w', 'utf-8')
     
     cnt = 0
@@ -252,7 +248,6 @@ if __name__ == '__main__':
         f.write(tweet['text'])
         f.write('\n')
 
-    
     f.close()
 
 
