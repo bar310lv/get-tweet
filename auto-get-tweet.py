@@ -48,26 +48,14 @@ class GetTweets(object):
     
     @abstractmethod
     def specifyUrlAndParams(self, keyword):
-        '''
-            呼び出し先 URL,パラメーターを返す
-            '''
     
     @abstractmethod
     def pickupTweet(self, res_text, includeRetweet):
-        '''
-            res_textからツイートを取り出し配列にセットして返却
-            '''
     
     @abstractmethod
     def getLimitContext(self, res_text):
-        '''
-            回数制限の情報を取得
-            '''
     
     def collect(self, total = -1, onlyText = False, includeRetweet = False):
-        '''
-            ツイート取得を開始
-            '''
         
         #回数制限を確認
         self.checkLimit()
@@ -128,9 +116,7 @@ class GetTweets(object):
                 print ('not found  -  X-Rate-Limit-Remaining or X-Rate-Limit-Reset')
                 self.checkLimit()
     def checkLimit(self):
-            '''
-            回数制限を問合せ、アクセス可能になるまで wait する
-            '''
+
             unavailableCnt = 0
             while True:
                 url = "https://api.twitter.com/1.1/application/rate_limit_status.json"
@@ -164,7 +150,7 @@ class GetTweets(object):
         print ('     == waiting %d sec ==' % seconds)
         print ('     =====================')
         sys.stdout.flush()
-        time.sleep(seconds + 10)  # 念のため + 10 秒
+        time.sleep(seconds + 10) 
  
     @staticmethod
     def bySearch(keyword):
@@ -184,17 +170,13 @@ class TweetsGetterBySearch(GetTweets):
         self.keyword = keyword
         
     def specifyUrlAndParams(self):
-        '''
-        呼出し先 URL、パラメータを返す
-        '''
+
         url = 'https://api.twitter.com/1.1/search/tweets.json'
         params = {'q':self.keyword, 'count':100}
         return url, params
  
     def pickupTweet(self, res_text):
-        '''
-        res_text からツイートを取り出し、配列にセットして返却
-        '''
+
         results = []
         for tweet in res_text['statuses']:
             results.append(tweet)
@@ -202,9 +184,7 @@ class TweetsGetterBySearch(GetTweets):
         return results
  
     def getLimitContext(self, res_text):
-        '''
-        回数制限の情報を取得 （起動時）
-        '''
+
         remaining = res_text['resources']['search']['/search/tweets']['remaining']
         reset     = res_text['resources']['search']['/search/tweets']['reset']
  
@@ -212,25 +192,19 @@ class TweetsGetterBySearch(GetTweets):
     
  
 class TweetsGetterByUser(GetTweets):
-    '''
-    ユーザーを指定してツイートを取得
-    '''
+
     def __init__(self, screen_name):
         super(TweetsGetterByUser, self).__init__()
         self.screen_name = screen_name
         
     def specifyUrlAndParams(self):
-        '''
-        呼出し先 URL、パラメータを返す
-        '''
+
         url = 'https://api.twitter.com/1.1/statuses/user_timeline.json'
         params = {'screen_name':self.screen_name, 'count':200}
         return url, params
  
     def pickupTweet(self, res_text):
-        '''
-        res_text からツイートを取り出し、配列にセットして返却
-        '''
+
         results = []
         for tweet in res_text:
             results.append(tweet)
@@ -238,9 +212,7 @@ class TweetsGetterByUser(GetTweets):
         return results
  
     def getLimitContext(self, res_text):
-        '''
-        回数制限の情報を取得 （起動時）
-        '''
+
         remaining = res_text['resources']['statuses']['/statuses/user_timeline']['remaining']
         reset     = res_text['resources']['statuses']['/statuses/user_timeline']['reset']
  
