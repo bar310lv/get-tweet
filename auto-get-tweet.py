@@ -9,29 +9,40 @@ import json
 import urllib
 import pprint
 import requests
+import emoji
+import re
+import neologdn
+
+#クエリ変更
+since = '2019-10-30'
+until = '2019-10-31'
+#イベント変更
+event_name = '川越'
+#取得件数変更
+tweetsTotal = -1
 
 # 位置情報からランドマークを取得
-appid = "dj00aiZpPUJ5WHY4VUpITjdYQSZzPWNvbnN1bWVyc2VjcmV0Jng9ZjY-"
+# appid = "dj00aiZpPUJ5WHY4VUpITjdYQSZzPWNvbnN1bWVyc2VjcmV0Jng9ZjY-"
 
-base_url = "https://map.yahooapis.jp/placeinfo/V1/get"
-lat = "35.66521320007564"
-lon = "139.7300114513391"
+# base_url = "https://map.yahooapis.jp/placeinfo/V1/get"
+# lat = "35.706779"
+# lon = "139.659377"
 
-output = "json"
+# output = "json"
 
-url = base_url + "?lat=%s&lon=%s&appid=%s&output=%s" % (lat,lon,appid,output)
+# url = base_url + "?lat=%s&lon=%s&appid=%s&output=%s" % (lat,lon,appid,output)
 
-json_tree = json.loads(urllib.request.urlopen(url).read())
+# json_tree = json.loads(urllib.request.urlopen(url).read())
 
-area = json_tree["ResultSet"]["Area"]
+# area = json_tree["ResultSet"]["Area"]
 
-land_mark = [area.get('Name') for area in area]
+# land_mark = [area.get('Name') for area in area]
 
-land_mark = land_mark[0]
+# # land_mark = land_mark[0]
 
-pprint.pprint(land_mark)
+# pprint.pprint(land_mark)
 
-# pprint.pprint(json_tree)
+# # pprint.pprint(json_tree)
 
 
 # ランドマーク検索
@@ -48,14 +59,26 @@ class GetTweets(object):
     
     @abstractmethod
     def specifyUrlAndParams(self, keyword):
+        '''
+            呼び出し先 URL,パラメーターを返す
+            '''
     
     @abstractmethod
     def pickupTweet(self, res_text, includeRetweet):
+        '''
+            res_textからツイートを取り出し配列にセットして返却
+            '''
     
     @abstractmethod
     def getLimitContext(self, res_text):
+        '''
+            回数制限の情報を取得
+            '''
     
     def collect(self, total = -1, onlyText = False, includeRetweet = False):
+        '''
+            ツイート取得を開始
+            '''
         
         #回数制限を確認
         self.checkLimit()
@@ -69,6 +92,7 @@ class GetTweets(object):
         unavailableCnt = 0
         while True:
             res = self.session.get(url, params = params)
+            print(params)
             if res.status_code == 503:
             #503:Service is Unavailable
                 if unavailableCnt > 10:
@@ -116,7 +140,9 @@ class GetTweets(object):
                 print ('not found  -  X-Rate-Limit-Remaining or X-Rate-Limit-Reset')
                 self.checkLimit()
     def checkLimit(self):
-
+            '''
+            回数制限を問合せ、アクセス可能になるまで wait する
+            '''
             unavailableCnt = 0
             while True:
                 url = "https://api.twitter.com/1.1/application/rate_limit_status.json"
@@ -150,7 +176,7 @@ class GetTweets(object):
         print ('     == waiting %d sec ==' % seconds)
         print ('     =====================')
         sys.stdout.flush()
-        time.sleep(seconds + 10) 
+        time.sleep(seconds + 10)  # 念のため + 10 秒
  
     @staticmethod
     def bySearch(keyword):
@@ -170,13 +196,26 @@ class TweetsGetterBySearch(GetTweets):
         self.keyword = keyword
         
     def specifyUrlAndParams(self):
-
+        '''
+        呼出し先 URL、パラメータを返す
+        '''
         url = 'https://api.twitter.com/1.1/search/tweets.json'
-        params = {'q':self.keyword, 'count':100}
+        query = self.keyword
+
+        # print(query)
+        params = {
+            'q':query, 
+            # 'since':since, 
+            # 'until':until, 
+            'count':10
+            }
+
         return url, params
  
     def pickupTweet(self, res_text):
-
+        '''
+        res_text からツイートを取り出し、配列にセットして返却
+        '''
         results = []
         for tweet in res_text['statuses']:
             results.append(tweet)
@@ -184,7 +223,9 @@ class TweetsGetterBySearch(GetTweets):
         return results
  
     def getLimitContext(self, res_text):
-
+        '''
+        回数制限の情報を取得 （起動時）
+        '''
         remaining = res_text['resources']['search']['/search/tweets']['remaining']
         reset     = res_text['resources']['search']['/search/tweets']['reset']
  
@@ -192,19 +233,25 @@ class TweetsGetterBySearch(GetTweets):
     
  
 class TweetsGetterByUser(GetTweets):
-
+    '''
+    ユーザーを指定してツイートを取得
+    '''
     def __init__(self, screen_name):
         super(TweetsGetterByUser, self).__init__()
         self.screen_name = screen_name
         
     def specifyUrlAndParams(self):
-
+        '''
+        呼出し先 URL、パラメータを返す
+        '''
         url = 'https://api.twitter.com/1.1/statuses/user_timeline.json'
         params = {'screen_name':self.screen_name, 'count':200}
         return url, params
  
     def pickupTweet(self, res_text):
-
+        '''
+        res_text からツイートを取り出し、配列にセットして返却
+        '''
         results = []
         for tweet in res_text:
             results.append(tweet)
@@ -212,27 +259,39 @@ class TweetsGetterByUser(GetTweets):
         return results
  
     def getLimitContext(self, res_text):
-
+        '''
+        回数制限の情報を取得 （起動時）
+        '''
         remaining = res_text['resources']['statuses']['/statuses/user_timeline']['remaining']
         reset     = res_text['resources']['statuses']['/statuses/user_timeline']['reset']
  
         return int(remaining), int(reset)
 
 
+    def remove(src_str):
+        tweet = ''.join(c for c in src_str if c not in emoji.UNICODE_EMOJI)
+
+        return tweet
+
+
  
 if __name__ == '__main__':
  
     # キーワードで取得
-    getter = GetTweets.bySearch(land_mark)
+    getter = GetTweets.bySearch(event_name)
     
     # ユーザーを指定して取得 （screen_name）
     # getter = GetTweets.byUser('bar310lv')
 
-    #tweets1.txtに書き込み
-    f = codecs.open('/Users/oybn/fasttext/tweets1.txt', 'w', 'utf-8')
+    #期間を指定して取得
+
+    f = codecs.open('/Users/oybn/fasttext/tweets%s.txt' % event_name, 'w', 'utf-8')
     
     cnt = 0
-    for tweet in getter.collect(total = 10):
+    list_tmp = []
+    list_text = []
+
+    for tweet in getter.collect(total = tweetsTotal):
         cnt += 1
         # print ('------ %d' % cnt)
         # print ('{} {} {}'.format(tweet['id'], tweet['created_at'], '@'+tweet['user']['screen_name']))
@@ -244,11 +303,18 @@ if __name__ == '__main__':
         # f.write(tweet['created_at'])
         # f.write('\n')
         # f.write(tweet['user']['screen_name'])
-        f.write('\n')
+        # f.write('\n')
+
+        print(tweet['text'])
+        print('\n')
         f.write(tweet['text'])
         f.write('\n')
 
+        list_text.append(tweet['text'])
+    
     f.close()
+
+   
 
 
 
